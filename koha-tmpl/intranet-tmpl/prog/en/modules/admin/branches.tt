@@ -291,6 +291,65 @@
                     <div class="hint">Set to 'yes' to show this library as a search option and on the libraries page in the OPAC.</div>
                 </li>
                 <li>
+                    <label for="library_hours">Opening hours: </label>
+                    <table id="library_hours_table">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Open time</th>
+                                <th>Close time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            [% SET CalendarFirstDayOfWeek = Koha.Preference("CalendarFirstDayOfWeek") %]
+                            [% IF library.library_hours.count > 0 # Existing hours %]
+                                [% SET library_hours = library.library_hours.as_list %]
+
+                                [% FOR i IN [0..6] %]
+                                [% SET d = ( CalendarFirstDayOfWeek + i ) % 7 %]
+                                [% SET hr = library_hours.$d %]
+                                <tr id="hours_[% d | html %]">
+                                    <td>
+                                        [% PROCESS dayname day=d %]
+                                        <input type="hidden" value="[% d | html %]" name="day">
+                                    </td>
+                                    <td>
+                                        [% IF hr.open_time %]
+                                        <input type="text" size="5" value="[% hr.open_time | html %]" name="open_time" class="flatpickr" data-flatpickr-time-only="true">
+                                        [% ELSE %]
+                                        <input type="text" size="5" value="" name="open_time" class="flatpickr" data-flatpickr-time-only="true">
+                                        [% END %]
+                                    </td>
+                                    <td>
+                                        [% IF hr.close_time %]
+                                        <input type="text" size="5" value="[% hr.close_time | html %]" name="close_time" class="flatpickr" data-flatpickr-time-only="true">
+                                        [% ELSE %]
+                                        <input type="text" size="5" value="" name="close_time" class="flatpickr" data-flatpickr-time-only="true">
+                                        [% END %]
+                                    </td>
+                                </tr>
+                                [% END %]
+                            [% ELSE # New hours %]
+                                [% FOR i IN [0..6] %]
+                                [% SET d = ( CalendarFirstDayOfWeek + i ) % 7 %]
+                                <tr id="hours_[% d | html %]">
+                                    <td>
+                                        [% PROCESS dayname day=d %]
+                                        <input type="hidden" value="[% d | html %]" name="day">
+                                    </td>
+                                    <td>
+                                        <input type="text" size="5" name="open_time" class="noEnterSubmit flatpickr" data-flatpickr-time-only="true">
+                                    </td>
+                                    <td>
+                                        <input type="text" size="5" name="close_time" class="noEnerSubmit flatpickr" data-flatpickr-time-only="true">
+                                    </td>
+                                </tr>
+                                [% END %]
+                            [% END %]
+                        </tbody>
+                    </table>
+                </li>
+                <li>
                     <label for="opacuserjs">Specific OPAC JS: </label>
                     <div style="display:flex; flex-direction:column;">
                         <a class="expand-textarea" id="expand_opacuserjs" data-target="opacuserjs" data-syntax="javascript" href="#">Edit</a>
@@ -306,7 +365,6 @@
                         <a class="collapse-textarea" id="collapse_opacusercss" data-target="opacusercss" data-syntax="css" style="display:none" href="#">Collapse</br></a>
                     </div>
                 </li>
-                </li>
             </ol>
         </fieldset>
         <fieldset class="action">
@@ -314,6 +372,24 @@
             <a class="cancel" href="/cgi-bin/koha/admin/branches.pl">Cancel</a>
         </fieldset>
     </form>
+[% END %]
+
+[% BLOCK dayname %]
+    [% IF day == 0 %]
+    <span>Sunday</span>
+    [% ELSIF day == 1 %]
+    <span>Monday</span>
+    [% ELSIF day == 2 %]
+    <span>Tuesday</span>
+    [% ELSIF day == 3 %]
+    <span>Wednesday</span>
+    [% ELSIF day == 4 %]
+    <span>Thursday</span>
+    [% ELSIF day == 5 %]
+    <span>Friday</span>
+    [% ELSE %]
+    <span>Saturday</span>
+    [% END %]
 [% END %]
 
 [% IF op == 'delete_confirm' and not ( items_count or patrons_count )%]
@@ -347,6 +423,7 @@
                     <th>Pickup location</th>
                     <th>Public</th>
                     <th>SMTP server</th>
+                    <th>Library hours</th>
                     <th data-class-name="actions noExport">Actions</th>
                 </tr>
             </thead>
@@ -477,6 +554,40 @@
                             <span>No</span>
                         [% END %]
                     </li>
+                    <li>
+                        <span class="label">Opening hours: </span>
+                        [% IF library.library_hours.count > 0 # Existing library %]
+                            [% SET library_hours = library.library_hours.as_list %]
+                            <table id="library_hours_table">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Open time</th>
+                                        <th>Close time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    [% FOR i IN [0..6] %]
+                                    [% SET d = ( CalendarFirstDayOfWeek + i) % 7 %]
+                                    [% SET hr = library_hours.$d %]
+                                    <tr id="hours_[% d | html %]">
+                                        <td>
+                                            <span>[% PROCESS dayname day=d %]</span>
+                                        </td>
+                                        <td>
+                                            <span>[% hr.open_time | html %]</span>
+                                        </td>
+                                        <td>
+                                            <span>[% hr.close_time | html %]</span>
+                                        </td>
+                                    </tr>
+                                    [% END %]
+                                </tbody>
+                            </table>
+                        [% ELSE %]
+                            <span>No opening hours have been set.</span>
+                        [% END %]
+                    </li>
                 </ol>
             </div> <!-- /.rows -->
         </div> <!-- /.col-sm-6 -->
@@ -505,6 +616,7 @@
 
 [% MACRO jsinclude BLOCK %]
     [% Asset.js("js/admin-menu.js") | $raw %]
+    [% INCLUDE 'calendar.inc' %]
     [% INCLUDE 'datatables.inc' %]
     [% INCLUDE 'columns_settings.inc' %]
     [% Asset.js( "lib/codemirror/codemirror.min.js" ) | $raw %]
@@ -534,6 +646,7 @@
         var table_settings = [% TablesSettings.GetTableSettings( 'admin', 'libraries', 'libraries', 'json' ) | $raw %];
         var saved_table = localStorage.getItem("DataTables_libraries_/cgi-bin/koha/admin/branches.pl");
         var updated_settings = get_columns_saved_state(saved_table, table_settings);
+        var calendarFirstDayOfWeek = '[% Koha.Preference('CalendarFirstDayOfWeek') | html %]';
 
         $(document).ready(function() {
 
@@ -542,11 +655,11 @@
                 "ajax": {
                     "url": libraries_url
                 },
-                'embed': [ 'smtp_server' ],
+                'embed': [ 'smtp_server', 'library_hours' ],
                 'emptyTable': '<div class="dialog message">'+_("There are no libraries defined.")+' <a href="/cgi-bin/koha/admin/branches.pl?op=add_form">'+_("Start defining libraries")+'</a>.</div>',
                 "stateSave": true,
                 "columnDefs": [ {
-                    "targets": [0,1,3,4,7,9,10,11,12,13,14,15,16],
+                    "targets": [0,1,3,4,7,10,11,12,13,14,15,16,17],
                     "render": function (data, type, row, meta) {
                         if ( type == 'display' ) {
                             if ( data != null ) {
@@ -639,6 +752,32 @@
                         },
                         "searchable": false,
                         "visible": true,
+                        "orderable": false
+                    },
+                    {
+                        "data": function( row, type, val, meta ) {
+                            let result = '';
+                            if ( row.library_hours.length > 0 ) {
+                                const daysOfWeek = [ _("Sunday"), _("Monday"), _("Tuesday"), _("Wednesday"), _("Thursday"), _("Friday"), _("Saturday") ];
+
+                                result = '<table id="library_hours_table"><thead><tr><th>Day</th><th>Open time</th><th>Close time</th></tr></thead><tbody>';
+                                let counter = 0;
+                                for (let i = calendarFirstDayOfWeek; counter < 7; i++) {
+                                    const day = i % 7; // Wrap around the day using modulo operator
+                                    result += '<tr id="hours_'+day+'">';
+                                    result += '<td>'+daysOfWeek[day]+'</td>';
+                                    result += '<td><span>'+row.library_hours[day].open_time+'</span></td>';
+                                    result += '<td><span>'+row.library_hours[day].close_time+'</span></td>';
+                                    result += '</tr>';
+                                    counter++;
+                                }
+                                result += '</tbody></table>';
+                            } else {
+                                result = _("Library hours not set");
+                            }
+                            return result;
+                        },
+                        "searchable": false,
                         "orderable": false
                     },
                     {

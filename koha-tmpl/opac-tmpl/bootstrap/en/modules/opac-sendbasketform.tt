@@ -22,7 +22,13 @@
 
                             [% IF ( error ) %]
                                 <div class="alert alert-warning">
-                                    <p>There was an error sending the cart.</p>
+                                    [% IF error == 'NO_BODY' %]
+                                        <p>There was an error sending the cart: No valid records were found.</p>
+                                    [% ELSIF error == 'NO_REPLY_ADDRESS' %]
+                                        <p>There was an error sending the cart: We cannot send an email as there is no email address recorded for your account (your email address is used for the reply to address).</p>
+                                    [% ELSE %]
+                                        <p>There was an error sending the cart.</p>
+                                    [% END %]
                                 </div>
                             [% END %]
 

@@ -103,6 +103,7 @@
           type: string
           enum:
             - smtp_server
+            - library_hours
         collectionFormat: csv
     produces:
       - application/json
@@ -195,6 +196,7 @@
           type: string
           enum:
             - smtp_server
+            - library_hours
         collectionFormat: csv
     produces:
       - application/json

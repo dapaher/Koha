@@ -33,6 +33,7 @@ use Koha::Patrons;
 use Koha::Items;
 use Koha::Libraries;
 use Koha::SMTP::Servers;
+use Koha::Library::Hours;
 
 my $input        = CGI->new;
 my $branchcode   = $input->param('branchcode');
@@ -101,19 +102,48 @@ if ( $op eq 'add_form' ) {
             Koha::Database->new->schema->txn_do(
                 sub {
                     $library->store->discard_changes;
+
                     # Deal with SMTP server
                     my $smtp_server_id = $input->param('smtp_server');
 
-                    if ( $smtp_server_id ) {
+                    if ($smtp_server_id) {
                         if ( $smtp_server_id eq '*' ) {
-                            $library->smtp_server({ smtp_server => undef });
-                        }
-                        else {
-                            my $smtp_server = Koha::SMTP::Servers->find( $smtp_server_id );
+                            $library->smtp_server( { smtp_server => undef } );
+                        } else {
+                            my $smtp_server = Koha::SMTP::Servers->find($smtp_server_id);
                             Koha::Exceptions::BadParameter->throw( parameter => 'smtp_server' )
                                 unless $smtp_server;
-                            $library->smtp_server({ smtp_server => $smtp_server });
+                            $library->smtp_server( { smtp_server => $smtp_server } );
                         }
+                    }
+
+                    # Deal with opening hours
+                    my @days        = $input->multi_param("day");
+                    my @open_times  = $input->multi_param("open_time");
+                    my @close_times = $input->multi_param("close_time");
+
+                    my $index = 0;
+                    foreach my $day (@days) {
+                        if ( $open_times[$index] !~ /([0-9]{2}:[0-9]{2})/ ) {
+                            $open_times[$index] = undef;
+                        }
+                        if ( $close_times[$index] !~ /([0-9]{2}:[0-9]{2})/ ) {
+                            $close_times[$index] = undef;
+                        }
+
+                        my $openday = Koha::Library::Hours->find( { library_id => $branchcode, day => $day } );
+                        if ($openday) {
+                            $openday->update(
+                                { open_time => $open_times[$index], close_time => $close_times[$index] } );
+                        } else {
+                            $openday = Koha::Library::Hour->new(
+                                {
+                                    library_id => $branchcode, day => $day, open_time => $open_times[$index],
+                                    close_time => $close_times[$index]
+                                }
+                            )->store;
+                        }
+                        $index++;
                     }
 
                     push @messages, { type => 'message', code => 'success_on_update' };
@@ -145,13 +175,37 @@ if ( $op eq 'add_form' ) {
 
                     my $smtp_server_id = $input->param('smtp_server');
 
-                    if ( $smtp_server_id ) {
+                    # Deal with SMTP server
+                    if ($smtp_server_id) {
                         if ( $smtp_server_id ne '*' ) {
-                            my $smtp_server = Koha::SMTP::Servers->find( $smtp_server_id );
+                            my $smtp_server = Koha::SMTP::Servers->find($smtp_server_id);
                             Koha::Exceptions::BadParameter->throw( parameter => 'smtp_server' )
                                 unless $smtp_server;
-                            $library->smtp_server({ smtp_server => $smtp_server });
+                            $library->smtp_server( { smtp_server => $smtp_server } );
                         }
+                    }
+
+                    # Deal with opening hours
+                    my @days        = $input->multi_param("day");
+                    my @open_times  = $input->multi_param("open_time");
+                    my @close_times = $input->multi_param("close_time");
+
+                    my $index = 0;
+                    foreach my $day (@days) {
+                        if ( $open_times[$index] !~ /([0-9]{2}:[0-9]{2})/ ) {
+                            $open_times[$index] = undef;
+                        }
+                        if ( $close_times[$index] !~ /([0-9]{2}:[0-9]{2})/ ) {
+                            $close_times[$index] = undef;
+                        }
+
+                        my $openday = Koha::Library::Hour->new(
+                            {
+                                library_id => $branchcode, day => $day, open_time => $open_times[$index],
+                                close_time => $close_times[$index]
+                            }
+                        )->store;
+                        $index++;
                     }
 
                     push @messages, { type => 'message', code => 'success_on_insert' };
