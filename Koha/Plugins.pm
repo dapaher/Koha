@@ -26,6 +26,7 @@ use Module::Load::Conditional qw( can_load );
 use Module::Load;
 use Module::Pluggable search_path => ['Koha::Plugin'], except => qr/::Edifact(|::Line|::Message|::Order|::Segment|::Transport)$/;
 use Try::Tiny;
+use POSIX qw(getpid);
 
 use C4::Context;
 use C4::Output;
@@ -312,6 +313,8 @@ sub InstallPlugins {
 
     Koha::Cache::Memory::Lite->clear_from_cache(ENABLED_PLUGINS_CACHE_KEY);
 
+    $self->_restart_after_change();
+
     return @plugins;
 }
 
@@ -354,6 +357,19 @@ sub RemovePlugins {
         Koha::Plugins::Datas->search($cond)->update( { plugin_value => 0 } );
         Koha::Cache::Memory::Lite->clear_from_cache( Koha::Plugins->ENABLED_PLUGINS_CACHE_KEY );
     }
+
+    $class->_restart_after_change();
+}
+
+sub _restart_after_change {
+    my ( $class, $params ) = @_;
+
+    return unless ( C4::Context->config('plugins_restart') && C4::Context->psgi_env );
+
+    my $parent_pid = getppid();
+
+    # Send HUP signal to Plack parent process for graceful restart
+    kill 'HUP', $parent_pid;
 }
 
 1;
